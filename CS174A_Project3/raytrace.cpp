@@ -21,6 +21,61 @@ struct Ray
 };
 
 // TODO: add structs for spheres, lights and anything else you may need.
+struct RGB {
+    
+    float red;
+    float green;
+    float blue;
+} g_back;
+
+struct Intensity {
+    
+    float red;
+    float green;
+    float blue;
+} g_ambient;
+
+struct Position {
+    
+    float x;
+    float y;
+    float z;
+};
+
+struct Scale {
+    
+    float x;
+    float y;
+    float z;
+    
+};
+
+struct Sphere {
+    
+    string name;
+    Position pos;
+    struct Scale scl; // TODO: why do I need "struct" here? This isn't C!
+    RGB color;
+    float k_a;
+    float k_d;
+    float k_s;
+    float k_r;
+    float n;
+    
+};
+
+struct Light {
+    
+    string name;
+    Position pos;
+    Intensity intensity;
+    
+};
+
+string g_outputFileName;
+
+vector<Sphere> g_spheres;
+vector<Light> g_lights;
 
 vector<vec4> g_colors;
 
@@ -54,11 +109,99 @@ float toFloat(const string& s)
 void parseLine(const vector<string>& vs)
 {
     //TODO: add parsing of NEAR, LEFT, RIGHT, BOTTOM, TOP, SPHERE, LIGHT, BACK, AMBIENT, OUTPUT.
-    if (vs[0] == "RES")
-    {
+    if (vs[0] == "RES") {
+        
         g_width = (int)toFloat(vs[1]);
         g_height = (int)toFloat(vs[2]);
         g_colors.resize(g_width * g_height);
+        
+    } else if ("NEAR") {
+        
+        g_near = toFloat(vs[1]);
+        
+    } else if ("LEFT") {
+        
+        g_left = toFloat(vs[1]);
+        
+    } else if ("RIGHT") {
+        
+        g_right = toFloat(vs[1]);
+        
+    } else if ("BOTTOM") {
+        
+        g_bottom = toFloat(vs[1]);
+        
+    } else if ("TOP") {
+        
+        g_top = toFloat(vs[1]);
+        
+    } else if ("SPHERE") {
+        
+        if (g_spheres.size() < 5) {
+            
+            Sphere sphere;
+            sphere.name = vs[1];
+            sphere.pos.x = toFloat(vs[2]);
+            sphere.pos.y = toFloat(vs[3]);
+            sphere.pos.z = toFloat(vs[4]);
+            sphere.scl.x = toFloat(vs[5]);
+            sphere.scl.y = toFloat(vs[6]);
+            sphere.scl.z = toFloat(vs[7]);
+            sphere.color.red = toFloat(vs[8]);
+            sphere.color.green = toFloat(vs[9]);
+            sphere.color.blue = toFloat(vs[10]);
+            sphere.k_a = toFloat(vs[11]);
+            sphere.k_d = toFloat(vs[12]);
+            sphere.k_s = toFloat(vs[13]);
+            sphere.k_r = toFloat(vs[14]);
+            sphere.n = toFloat(vs[15]);
+
+            g_spheres.push_back(sphere);
+            
+        } else {
+            
+            cout << "Cannot have more than 5 spheres" << endl;
+            exit(1);
+            
+        }
+        
+    } else if ("LIGHT") {
+        
+        if (g_lights.size() < 5) {
+            
+            Light light;
+            light.name = vs[1];
+            light.pos.x = toFloat(vs[2]);
+            light.pos.y = toFloat(vs[3]);
+            light.pos.z = toFloat(vs[4]);
+            light.intensity.red = toFloat(vs[5]);
+            light.intensity.green = toFloat(vs[6]);
+            light.intensity.blue = toFloat(vs[7]);
+            
+            g_lights.push_back(light);
+
+        } else {
+            
+            cout << "Cannot have more than 5 lights" << endl;
+            exit(1);
+            
+        }
+        
+    } else if ("BACK") {
+        
+        g_back.red = toFloat(vs[1]);
+        g_back.green = toFloat(vs[2]);
+        g_back.blue = toFloat(vs[3]);
+        
+    } else if ("AMBIENT") {
+        
+        g_ambient.red = toFloat(vs[1]);
+        g_ambient.green = toFloat(vs[2]);
+        g_ambient.blue = toFloat(vs[3]);
+        
+    } else if ("OUTPUT") {
+        
+        g_outputFileName = vs[1];
     }
 }
 
