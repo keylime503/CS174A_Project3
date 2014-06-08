@@ -85,6 +85,50 @@ float g_top;
 float g_bottom;
 float g_near;
 
+void printParsedData() {
+    
+    cout << "Printing Parsed Data" << endl;
+    
+    cout << "NEAR: " << g_near << endl;
+    cout << "LEFT: " << g_left << endl;
+    cout << "RIGHT: " << g_right << endl;
+    cout << "BOTTOM: " << g_bottom << endl;
+    cout << "TOP: " << g_top << endl;
+    cout << "RES: " << g_width << ", " << g_height << endl;
+    
+    Sphere s;
+    size_t nSpheres = g_spheres.size();
+    cout << nSpheres << " spheres:" << endl;
+    for (int i = 0; i < nSpheres; i++) {
+        
+        s = g_spheres[i];
+        cout << "\t" << s.name << ": pos(" << s.pos.x << ", " << s.pos.y << ", " << s.pos.z << "), ";
+        cout << "scl(" << s.scl.x << ", " << s.scl.y << ", " << s.scl.z << "), ";
+        cout << "color(" << s.color.red << ", " << s.color.green << ", " << s.color.blue << "), ";
+        cout << s.k_a << ", ";
+        cout << s.k_d << ", ";
+        cout << s.k_s << ", ";
+        cout << s.k_r << ", ";
+        cout << s.n << endl;
+    }
+    
+    Light l;
+    size_t nLights = g_lights.size();
+    cout << nLights << " lights:" << endl;
+    for (int i = 0; i < nLights; i++) {
+        
+        l = g_lights[i];
+        cout << "\t" << l.name << ": pos(" << l.pos.x << ", " << l.pos.y << ", " << l.pos.z << "), ";
+        cout << "scl(" << l.intensity.red << ", " << l.intensity.green << ", " << l.intensity.blue << ")" << endl;;
+    }
+    
+    cout << "BACK: (" << g_back.red << ", " << g_back.green << ", " << g_back.blue << ")" << endl;
+    cout << "AMBIENT: (" << g_ambient.red << ", " << g_ambient.green << ", " << g_ambient.blue << ")" << endl;
+    cout << "OUTPUT: " << g_outputFileName << endl;
+
+    return;
+}
+
 
 // -------------------------------------------------------------------
 // Input file parsing
@@ -115,27 +159,27 @@ void parseLine(const vector<string>& vs)
         g_height = (int)toFloat(vs[2]);
         g_colors.resize(g_width * g_height);
         
-    } else if ("NEAR") {
+    } else if (vs[0] == "NEAR") {
         
         g_near = toFloat(vs[1]);
         
-    } else if ("LEFT") {
+    } else if (vs[0] == "LEFT") {
         
         g_left = toFloat(vs[1]);
         
-    } else if ("RIGHT") {
+    } else if (vs[0] == "RIGHT") {
         
         g_right = toFloat(vs[1]);
         
-    } else if ("BOTTOM") {
+    } else if (vs[0] == "BOTTOM") {
         
         g_bottom = toFloat(vs[1]);
         
-    } else if ("TOP") {
+    } else if (vs[0] == "TOP") {
         
         g_top = toFloat(vs[1]);
         
-    } else if ("SPHERE") {
+    } else if (vs[0] == "SPHERE") {
         
         if (g_spheres.size() < 5) {
             
@@ -165,7 +209,7 @@ void parseLine(const vector<string>& vs)
             
         }
         
-    } else if ("LIGHT") {
+    } else if (vs[0] == "LIGHT") {
         
         if (g_lights.size() < 5) {
             
@@ -187,19 +231,19 @@ void parseLine(const vector<string>& vs)
             
         }
         
-    } else if ("BACK") {
+    } else if (vs[0] == "BACK") {
         
         g_back.red = toFloat(vs[1]);
         g_back.green = toFloat(vs[2]);
         g_back.blue = toFloat(vs[3]);
         
-    } else if ("AMBIENT") {
+    } else if (vs[0] == "AMBIENT") {
         
         g_ambient.red = toFloat(vs[1]);
         g_ambient.green = toFloat(vs[2]);
         g_ambient.blue = toFloat(vs[3]);
         
-    } else if ("OUTPUT") {
+    } else if (vs[0] == "OUTPUT") {
         
         g_outputFileName = vs[1];
     }
@@ -334,6 +378,7 @@ int main(int argc, char* argv[])
         exit(1);
     }
     loadFile(argv[1]);
+    printParsedData(); // TODO: Remove this
     render();
     saveFile();
 	return 0;
