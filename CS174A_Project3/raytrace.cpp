@@ -20,7 +20,8 @@ struct Ray
     vec4 dir;
 };
 
-// TODO: add structs for spheres, lights and anything else you may need.
+/*** My structs ***/
+
 struct RGB {
     
     float red;
@@ -72,6 +73,8 @@ struct Light {
     
 };
 
+/*** My global data members ***/
+
 string g_outputFileName;
 
 vector<Sphere> g_spheres;
@@ -85,6 +88,7 @@ float g_top;
 float g_bottom;
 float g_near;
 
+/*** Print Parsed Data for Debugging ***/
 void printParsedData() {
     
     cout << "Printing Parsed Data" << endl;
@@ -152,7 +156,6 @@ float toFloat(const string& s)
 
 void parseLine(const vector<string>& vs)
 {
-    //TODO: add parsing of NEAR, LEFT, RIGHT, BOTTOM, TOP, SPHERE, LIGHT, BACK, AMBIENT, OUTPUT.
     if (vs[0] == "RES") {
         
         g_width = (int)toFloat(vs[1]);
@@ -304,9 +307,14 @@ vec4 getDir(int ix, int iy)
 {
     // TODO: modify this. This should return the direction from the origin
     // to pixel (ix, iy), normalized.
+    
+    float u_c = g_left + (g_right - g_left) * (ix / (g_width - 1.0));
+    float v_r = g_bottom + (g_top - g_bottom) * (iy / (g_height - 1.0));
+    float n = -g_near;
+    
     vec4 dir;
-    dir = vec4(0.0f, 0.0f, -1.0f, 0.0f);
-    return dir;
+    dir = vec4(u_c, v_r, n, 0.0f);
+    return normalize(dir);
 }
 
 void renderPixel(int ix, int iy)
@@ -378,7 +386,6 @@ int main(int argc, char* argv[])
         exit(1);
     }
     loadFile(argv[1]);
-    printParsedData(); // TODO: Remove this
     render();
     saveFile();
 	return 0;
