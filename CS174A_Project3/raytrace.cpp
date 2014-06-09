@@ -88,6 +88,8 @@ float g_top;
 float g_bottom;
 float g_near;
 
+vec4 eye = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
 /*** Print Parsed Data for Debugging ***/
 void printParsedData() {
     
@@ -293,6 +295,55 @@ void setColor(int ix, int iy, const vec4& color)
 
 // TODO: add your ray-sphere intersection routine here.
 
+// Callers of this function should check for -1.0 return value
+float getClosestIntersection(const Ray& ray) {
+    
+    Sphere s;
+    float tMax = -1.0;
+    size_t nSpheres = g_spheres.size();
+    for (int i = 0; i < nSpheres; i++) {
+        
+        s = g_spheres[i];
+        
+        // Calculate discriminant
+        float t = -1.0; // units of "dir" vector from eye to first intersection point with s
+        float d = (dot(ray.dir, eye) * dot(ray.dir, eye)) - (dot(ray.dir, ray.dir) * (dot(eye, eye) - 1.0));
+        if (d < 0.0) {
+            
+            /* No solution => no intersection, use background color */
+            
+            t = -1.0;
+            
+        } else if (d == 0.0) {
+            
+            /* One solution => One Intersection */
+            
+            t = (- dot(ray.dir, eye)) / (dot(ray.dir, ray.dir));
+            
+        } else {
+            
+            /* Two solutions => Two intersections */
+            
+            float t1 = (- dot(ray.dir, eye) + sqrt(d)) / (dot(ray.dir, ray.dir));
+            float t2 = (- dot(ray.dir, eye) - sqrt(d)) / (dot(ray.dir, ray.dir));
+            t = min(t1, t2);
+            
+        }
+        
+        if (tMax == -1.0) {
+            
+            tMax = t;
+            
+        } else {
+            
+            tMax = min(tMax, t);
+            
+        }
+    }
+    
+    return tMax;
+}
+
 
 // -------------------------------------------------------------------
 // Ray tracing
@@ -306,7 +357,7 @@ vec4 trace(const Ray& ray)
 vec4 getDir(int ix, int iy)
 {
     // TODO: modify this. This should return the direction from the origin
-    // to pixel (ix, iy), normalized.
+    // to pixel (ix, iy), normalized. -- Done
     
     float u_c = g_left + (g_right - g_left) * (ix / (g_width - 1.0));
     float v_r = g_bottom + (g_top - g_bottom) * (iy / (g_height - 1.0));
@@ -371,7 +422,7 @@ void saveFile()
             for (int i = 0; i < 3; i++)
                 buf[y*g_width*3+x*3+i] = (unsigned char)(((float*)g_colors[y*g_width+x])[i] * 255.9f);
     
-    // TODO: change file name based on input file name.
+    // TODO: change file name based on input file name. -- Done
     savePPM(g_width, g_height, g_outputFileName, buf);
     delete[] buf;
 }
