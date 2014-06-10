@@ -931,7 +931,7 @@ void printm(const mat4 a)
 inline
 mat4 identity()
 {
-    //Error( "replace with either a matrix constructor or identity method" );
+    Error( "replace with either a matrix constructor or identity method" );
     mat4 c;
     for(int i=0; i<4; i++) for(int j=0; j<4; j++) c[i][j]=0.0f;
     for(int i=0; i<4; i++) c[i][i] = 1.0f;

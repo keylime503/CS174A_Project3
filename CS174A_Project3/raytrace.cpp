@@ -27,6 +27,18 @@ struct RGB {
     float red;
     float green;
     float blue;
+    
+    RGB() : red(0.0), green(0.0), blue(0.0) {}
+    
+    RGB(float r, float g, float b) : red(r), green(g), blue(b) {}
+    
+    // Copy Constructor
+    RGB(const RGB &p) : red(p.red), green(p.green), blue(p.blue) {}
+    
+    // Overload addition operators
+    RGB operator + (const RGB &p) const { return RGB(red + p.red, green + p.green, blue + p.blue); }
+    RGB operator += (const RGB &p) { red += p.red; green += p.green; blue += p.blue; return *this; }
+    
 } g_back;
 
 struct Intensity {
@@ -295,7 +307,7 @@ void setColor(int ix, int iy, const vec4& color)
 
 mat4 getSphereTransMatrix(Sphere s) {
     
-    mat4 m = identity();
+    mat4 m = mat4();
     m *= Translate(s.pos.x, s.pos.y, s.pos.z);
     m *= Scale(s.scl.x, s.scl.y, s.scl.z);
     return m;
@@ -316,12 +328,88 @@ mat4 getSphereInverseTransMatrix(Sphere s) {
     return mInv;
 }
 
+RGB diffuseLight(Light l, vec4 p) {
+    
+    return RGB();
+}
+
+RGB specularLight(Light l, vec4 p) {
+    
+    return RGB();
+}
+
+RGB shadowRay(Light l, vec4 p) {
+    
+    vec4 lightPos = vec4(l.pos.x, l.pos.y, l.pos.z, 1.0f);
+    vec4 rayToLight = lightPos - p;
+
+    // Determine if light is blocked by other spheres
+    bool blocked = false;
+    Sphere s;
+    size_t nSpheres = g_spheres.size();
+    for (int i = 0; i < nSpheres; i++) {
+        
+        s = g_spheres[i];
+        
+        mat4 mInv = getSphereInverseTransMatrix(s);
+        vec4 trans_origin = mInv * p;;
+        vec4 trans_dir = mInv * rayToLight;
+        
+        // Calculate discriminant
+        float t = -1.0; // units of "dir" vector from eye to first intersection point with s
+        float d = (dot(trans_dir, trans_origin) * dot(trans_dir, trans_origin)) - (dot(trans_dir, trans_dir) * (dot(trans_origin, trans_origin) - 2.0));
+        if (d < 0.0) {
+            
+            /* No solution => no intersection */
+            
+            continue;
+            
+        } else if (d == 0.0) {
+            
+            /* One solution => One Intersection */
+            
+            t = (- dot(trans_dir, trans_origin)) / (dot(trans_dir, trans_dir));
+            
+        } else {
+            
+            /* Two solutions => Two intersections */
+            
+            float t1 = (- dot(trans_dir, trans_origin) + sqrt(d)) / (dot(trans_dir, trans_dir));
+            float t2 = (- dot(trans_dir, trans_origin) - sqrt(d)) / (dot(trans_dir, trans_dir));
+            t = min(t1, t2);
+            
+        }
+        
+        // Check if discovered intersection is actually blocking the light source
+        if (t < 1.0 && t > 0.0001) {
+            
+            blocked = true;
+            break;
+        }
+    }
+    
+    RGB ret = RGB(0.0, 0.0, 0.0);
+    
+    if (!blocked) {
+        
+        // Calculate local illumination at this point from this light
+        ret += diffuseLight(l, p);
+        ret += specularLight(l, p);
+        
+    }
+    
+    return ret;
+    
+    // TODO: Determine if this sphere itself is blocking the light, do I already do this?
+}
+
 // Callers of this function should check for -1.0 return value
 RGB getClosestIntersection(const Ray& ray) {
     
     Sphere s;
+    Sphere closestSphere;
     float tMax = -1.0;
-    RGB frontColor = g_back;
+    RGB closestColor = g_back;
     size_t nSpheres = g_spheres.size();
     for (int i = 0; i < nSpheres; i++) {
         
@@ -359,13 +447,48 @@ RGB getClosestIntersection(const Ray& ray) {
         // Check if this intersection is the closest to the camera so far
         if (tMax == -1.0 || t < tMax) {
             
-            tMax = t;
-            frontColor = s.color;
+            if (t > 1.0) {
+                
+                tMax = t;
+                // TODO: optimize by doing &g_spheres[need index of s here]
+                closestSphere = s;
+                closestColor = s.color;
+            
+            }
         }
     }
     
-    //return tMax; // TODO: uncomment this and change func return type to float
-    return frontColor;
+    // Check if ray does not intersect any objects
+    if (tMax == -1.0) {
+        
+        return g_back;
+    }
+    
+    // Calculate intersection point
+    vec4 p = eye + ray.dir * tMax;
+    
+    RGB localColor = RGB();
+    
+    // Loop through lights and compute local color addition for shadow rays
+    size_t nLights = g_lights.size();
+    for (int i = 0; i < nLights; i++) {
+        
+        localColor += shadowRay(g_lights[i], p);
+        //RGB tempRGB = shadowRay(g_lights[i], p);
+        //cout << "(" << tempRGB.red << ", " << tempRGB.green << ", " << tempRGB.blue << ")" << endl;
+        
+    }
+    
+    // Computer Ambient Light Contribution
+    float ambientRed = closestSphere.k_a * g_ambient.red * closestSphere.color.red;
+    float ambientGreen = closestSphere.k_a * g_ambient.green * closestSphere.color.green;
+    float ambientBlue = closestSphere.k_a * g_ambient.blue * closestSphere.color.blue;
+    RGB ambientColor = RGB(ambientRed, ambientGreen, ambientBlue);
+    
+    RGB pixelColor = localColor + ambientColor; // TODO: change this to add other sources of light by slide 2 on page 12 of lecture 12
+    // TODO: See spec equation for full pixel color equation (ambient, diffuse, specular, and reflection)
+    
+    return pixelColor;
 }
 
 
