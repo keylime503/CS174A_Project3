@@ -335,13 +335,11 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
     vec4 lightVector = normalize(lightPos - p);
     
     // Calculate Normal
-    mat4 m = getSphereTransMatrix(pointSphere);
     mat4 mInv = getSphereInverseTransMatrix(pointSphere);
-    vec4 spherePos = vec4(pointSphere.pos.x, pointSphere.pos.y, pointSphere.pos.z, 1.0f);
-    vec4 trans_sphere = mInv * spherePos;
-    vec4 trans_p = mInv * p;
-    vec4 normal = normalize(trans_p - trans_sphere);
-    normal = normalize(m * normal);
+    mat4 mTransInv = transpose(mInv);
+    vec4 normal_easy = mInv * p - eye;
+    vec4 normal = mTransInv * normal_easy;
+    normal = vec4(normal.x, normal.y, normal.z, 0.0f);
     
     // Calculate dot product
     float NdotL = dot(normal, lightVector);
@@ -352,6 +350,7 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
         return RGB();
     }
     
+    // TODO: Here is the diffuse bug: if sphere is only of one color, no way for other two colored lights to affect it
     float diffuseRed = pointSphere.k_d * l.intensity.red * NdotL * pointSphere.color.red;
     float diffuseGreen = pointSphere.k_d * l.intensity.green * NdotL * pointSphere.color.green;
     float diffuseBlue = pointSphere.k_d * l.intensity.blue * NdotL * pointSphere.color.blue;
@@ -410,7 +409,7 @@ RGB shadowRay(Light l, vec4 p, Sphere pointSphere) {
         }
         
         // Check if discovered intersection is actually blocking the light source
-        if (t < 1.0 && t > 0.0001) {
+        if (t < 1.0 && t > 0.00000001) {
             
             blocked = true;
             break;
@@ -501,7 +500,7 @@ RGB getClosestIntersection(const Ray& ray) {
     for (int i = 0; i < nLights; i++) {
         
         localColor += shadowRay(g_lights[i], p, closestSphere);
-        //RGB tempRGB = shadowRay(g_lights[i], p);
+        //RGB tempRGB = shadowRay(g_lights[i], p, closestSphere);
         //cout << "(" << tempRGB.red << ", " << tempRGB.green << ", " << tempRGB.blue << ")" << endl;
         
     }
@@ -562,7 +561,7 @@ void renderPixel(int ix, int iy)
     
         color = trace(ray);
 //    }
-    
+
     setColor(ix, iy, color);
 }
 
