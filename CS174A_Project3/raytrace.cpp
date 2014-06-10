@@ -328,17 +328,33 @@ mat4 getSphereInverseTransMatrix(Sphere s) {
     return mInv;
 }
 
-RGB diffuseLight(Light l, vec4 p) {
+RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
+    
+    // Calculate vector from point to light
+    vec4 lightPos = vec4(l.pos.x, l.pos.y, l.pos.z, 1.0f);
+    vec4 lightVector = normalize(lightPos - p);
+    
+    // Calculate Normal
+    vec4 spherePos = vec4(pointSphere.pos.x, pointSphere.pos.y, pointSphere.pos.z, 1.0f);
+    vec4 normal = normalize(p - spherePos);
+    
+    // Calculate dot product
+    float NdotL = dot(normal, lightVector);
+    
+    float diffuseRed = pointSphere.k_d * l.intensity.red * NdotL * pointSphere.color.red;
+    float diffuseGreen = pointSphere.k_d * l.intensity.green * NdotL * pointSphere.color.green;
+    float diffuseBlue = pointSphere.k_d * l.intensity.blue * NdotL * pointSphere.color.blue;
+    
+    RGB diffuseRGB = RGB(diffuseRed, diffuseGreen, diffuseBlue);
+    return diffuseRGB;
+}
+
+RGB specularLight(Light l, vec4 p, Sphere pointSphere) {
     
     return RGB();
 }
 
-RGB specularLight(Light l, vec4 p) {
-    
-    return RGB();
-}
-
-RGB shadowRay(Light l, vec4 p) {
+RGB shadowRay(Light l, vec4 p, Sphere pointSphere) {
     
     vec4 lightPos = vec4(l.pos.x, l.pos.y, l.pos.z, 1.0f);
     vec4 rayToLight = lightPos - p;
@@ -393,8 +409,8 @@ RGB shadowRay(Light l, vec4 p) {
     if (!blocked) {
         
         // Calculate local illumination at this point from this light
-        ret += diffuseLight(l, p);
-        ret += specularLight(l, p);
+        ret += diffuseLight(l, p, pointSphere);
+        ret += specularLight(l, p, pointSphere);
         
     }
     
@@ -409,7 +425,6 @@ RGB getClosestIntersection(const Ray& ray) {
     Sphere s;
     Sphere closestSphere;
     float tMax = -1.0;
-    RGB closestColor = g_back;
     size_t nSpheres = g_spheres.size();
     for (int i = 0; i < nSpheres; i++) {
         
@@ -452,7 +467,6 @@ RGB getClosestIntersection(const Ray& ray) {
                 tMax = t;
                 // TODO: optimize by doing &g_spheres[need index of s here]
                 closestSphere = s;
-                closestColor = s.color;
             
             }
         }
@@ -473,7 +487,7 @@ RGB getClosestIntersection(const Ray& ray) {
     size_t nLights = g_lights.size();
     for (int i = 0; i < nLights; i++) {
         
-        localColor += shadowRay(g_lights[i], p);
+        localColor += shadowRay(g_lights[i], p, closestSphere);
         //RGB tempRGB = shadowRay(g_lights[i], p);
         //cout << "(" << tempRGB.red << ", " << tempRGB.green << ", " << tempRGB.blue << ")" << endl;
         
