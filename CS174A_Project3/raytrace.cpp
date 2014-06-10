@@ -293,55 +293,79 @@ void setColor(int ix, int iy, const vec4& color)
 // -------------------------------------------------------------------
 // Intersection routine
 
-// TODO: add your ray-sphere intersection routine here.
+mat4 getSphereTransMatrix(Sphere s) {
+    
+    mat4 m = identity();
+    m *= Translate(s.pos.x, s.pos.y, s.pos.z);
+    m *= Scale(s.scl.x, s.scl.y, s.scl.z);
+    return m;
+}
+
+mat4 getSphereInverseTransMatrix(Sphere s) {
+    
+    mat4 m = getSphereTransMatrix(s);
+    mat4 mInv;
+    bool result = InvertMatrix(m, mInv);
+    if (result == false) {
+        
+        cout << "Matrix not invertible" << endl;
+        exit(1);
+        
+    }
+    
+    return mInv;
+}
 
 // Callers of this function should check for -1.0 return value
-float getClosestIntersection(const Ray& ray) {
+RGB getClosestIntersection(const Ray& ray) {
     
     Sphere s;
     float tMax = -1.0;
+    RGB frontColor = g_back;
     size_t nSpheres = g_spheres.size();
     for (int i = 0; i < nSpheres; i++) {
         
         s = g_spheres[i];
         
+        mat4 mInv = getSphereInverseTransMatrix(s);
+        vec4 trans_eye = mInv * eye;
+        vec4 trans_dir = mInv * ray.dir;
+        
         // Calculate discriminant
         float t = -1.0; // units of "dir" vector from eye to first intersection point with s
-        float d = (dot(ray.dir, eye) * dot(ray.dir, eye)) - (dot(ray.dir, ray.dir) * (dot(eye, eye) - 1.0));
+        float d = (dot(trans_dir, trans_eye) * dot(trans_dir, trans_eye)) - (dot(trans_dir, trans_dir) * (dot(trans_eye, trans_eye) - 2.0));
         if (d < 0.0) {
             
             /* No solution => no intersection, use background color */
             
-            t = -1.0;
+            continue;
             
         } else if (d == 0.0) {
             
             /* One solution => One Intersection */
             
-            t = (- dot(ray.dir, eye)) / (dot(ray.dir, ray.dir));
+            t = (- dot(trans_dir, trans_eye)) / (dot(trans_dir, trans_dir));
             
         } else {
             
             /* Two solutions => Two intersections */
             
-            float t1 = (- dot(ray.dir, eye) + sqrt(d)) / (dot(ray.dir, ray.dir));
-            float t2 = (- dot(ray.dir, eye) - sqrt(d)) / (dot(ray.dir, ray.dir));
+            float t1 = (- dot(trans_dir, trans_eye) + sqrt(d)) / (dot(trans_dir, trans_dir));
+            float t2 = (- dot(trans_dir, trans_eye) - sqrt(d)) / (dot(trans_dir, trans_dir));
             t = min(t1, t2);
             
         }
         
-        if (tMax == -1.0) {
+        // Check if this intersection is the closest to the camera so far
+        if (tMax == -1.0 || t < tMax) {
             
             tMax = t;
-            
-        } else {
-            
-            tMax = min(tMax, t);
-            
+            frontColor = s.color;
         }
     }
     
-    return tMax;
+    //return tMax; // TODO: uncomment this and change func return type to float
+    return frontColor;
 }
 
 
@@ -351,7 +375,10 @@ float getClosestIntersection(const Ray& ray) {
 vec4 trace(const Ray& ray)
 {
     // TODO: implement your ray tracing routine here.
-    return vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    
+    // Set color based on first intersection with object. If ray doesn't intersect with any objects, getClosestIntersection() returns background color
+    RGB closestColor = getClosestIntersection(ray);
+    return vec4(closestColor.red, closestColor.green, closestColor.blue, 1.0f);
 }
 
 vec4 getDir(int ix, int iy)
@@ -373,7 +400,19 @@ void renderPixel(int ix, int iy)
     Ray ray;
     ray.origin = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     ray.dir = getDir(ix, iy);
-    vec4 color = trace(ray);
+    vec4 color; // TODO: change back to "... = trace(ray);"
+    
+    
+    // TODO: debugging code, remove this
+//    if (ix != 300 || iy != 300) {
+//        
+//        color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+//        
+//    } else {
+    
+        color = trace(ray);
+//    }
+    
     setColor(ix, iy, color);
 }
 
