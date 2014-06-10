@@ -335,11 +335,22 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
     vec4 lightVector = normalize(lightPos - p);
     
     // Calculate Normal
+    mat4 m = getSphereTransMatrix(pointSphere);
+    mat4 mInv = getSphereInverseTransMatrix(pointSphere);
     vec4 spherePos = vec4(pointSphere.pos.x, pointSphere.pos.y, pointSphere.pos.z, 1.0f);
-    vec4 normal = normalize(p - spherePos);
+    vec4 trans_sphere = mInv * spherePos;
+    vec4 trans_p = mInv * p;
+    vec4 normal = normalize(trans_p - trans_sphere);
+    normal = normalize(m * normal);
     
     // Calculate dot product
     float NdotL = dot(normal, lightVector);
+    
+    // Check for self-blocking shadow ray
+    if (NdotL < 0) {
+        
+        return RGB();
+    }
     
     float diffuseRed = pointSphere.k_d * l.intensity.red * NdotL * pointSphere.color.red;
     float diffuseGreen = pointSphere.k_d * l.intensity.green * NdotL * pointSphere.color.green;
@@ -350,6 +361,8 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
 }
 
 RGB specularLight(Light l, vec4 p, Sphere pointSphere) {
+    
+    // TODO: check for self-blocking shadow ray? dot product < 0
     
     return RGB();
 }
