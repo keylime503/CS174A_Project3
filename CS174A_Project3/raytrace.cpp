@@ -392,9 +392,15 @@ RGB specularLight(Light l, vec4 p, Sphere pointSphere) {
     vec4 normal = p - sphereCenter;
     vec4 unit_normal = normalize(mInv * normal);
     normal = normalize(mInv * unit_normal);
+    
+//    cout << normal << endl;
+//    cout << lightVector << endl;
    
     vec4 r = 2 * normal * dot(normal, lightVector) - lightVector; // TODO: should this be normalized?
-    vec4 v = normalize(p - eye);
+    vec4 v = normalize(eye - p);
+    
+//    cout << r << endl;
+//    cout << v << endl;
     
     // Calculate dot product
     float RdotV = dot(r, v);
