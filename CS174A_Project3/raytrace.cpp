@@ -664,7 +664,7 @@ void saveFile()
     for (int y = 0; y < g_height; y++)
         for (int x = 0; x < g_width; x++)
             for (int i = 0; i < 3; i++)
-                buf[y*g_width*3+x*3+i] = (unsigned char)(((float*)g_colors[y*g_width+x])[i] * 255.9f);
+                buf[y*g_width*3+x*3+i] = (unsigned char) min((((float*)g_colors[y*g_width+x])[i] * 255.9f), 255.9f);
     
     // TODO: change file name based on input file name. -- Done
     savePPM(g_width, g_height, g_outputFileName, buf);
