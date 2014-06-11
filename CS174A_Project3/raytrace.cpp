@@ -305,6 +305,28 @@ void setColor(int ix, int iy, const vec4& color)
 // -------------------------------------------------------------------
 // Intersection routine
 
+mat4 getSphereScaleMatrix(Sphere s) {
+    
+    mat4 m = mat4();
+    m *= Scale(s.scl.x, s.scl.y, s.scl.z);
+    return m;
+}
+
+mat4 getSphereInverseScaleMatrix(Sphere s) {
+    
+    mat4 m = getSphereScaleMatrix(s);
+    mat4 mInv;
+    bool result = InvertMatrix(m, mInv);
+    if (result == false) {
+        
+        cout << "Matrix not invertible" << endl;
+        exit(1);
+        
+    }
+    
+    return mInv;
+}
+
 mat4 getSphereTransMatrix(Sphere s) {
     
     mat4 m = mat4();
@@ -335,11 +357,11 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
     vec4 lightVector = normalize(lightPos - p);
     
     // Calculate Normal
-    mat4 mInv = getSphereInverseTransMatrix(pointSphere);
-    mat4 mTransInv = transpose(mInv);
-    vec4 normal_easy = mInv * p - eye;
-    vec4 normal = mTransInv * normal_easy;
-    normal = vec4(normal.x, normal.y, normal.z, 0.0f);
+    mat4 mInv = getSphereInverseScaleMatrix(pointSphere);
+    vec4 sphereCenter = vec4(pointSphere.pos.x, pointSphere.pos.y, pointSphere.pos.z, 1.0f);
+    vec4 normal = p - sphereCenter;
+    vec4 unit_normal = normalize(mInv * normal);
+    normal = normalize(mInv * unit_normal);
     
     // Calculate dot product
     float NdotL = dot(normal, lightVector);
@@ -350,7 +372,6 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
         return RGB();
     }
     
-    // TODO: Here is the diffuse bug: if sphere is only of one color, no way for other two colored lights to affect it
     float diffuseRed = pointSphere.k_d * l.intensity.red * NdotL * pointSphere.color.red;
     float diffuseGreen = pointSphere.k_d * l.intensity.green * NdotL * pointSphere.color.green;
     float diffuseBlue = pointSphere.k_d * l.intensity.blue * NdotL * pointSphere.color.blue;
@@ -361,9 +382,38 @@ RGB diffuseLight(Light l, vec4 p, Sphere pointSphere) {
 
 RGB specularLight(Light l, vec4 p, Sphere pointSphere) {
     
-    // TODO: check for self-blocking shadow ray? dot product < 0
+    // Calculate vector from point to light
+    vec4 lightPos = vec4(l.pos.x, l.pos.y, l.pos.z, 1.0f);
+    vec4 lightVector = normalize(lightPos - p);
     
-    return RGB();
+    // Calculate Normal
+    mat4 mInv = getSphereInverseScaleMatrix(pointSphere);
+    vec4 sphereCenter = vec4(pointSphere.pos.x, pointSphere.pos.y, pointSphere.pos.z, 1.0f);
+    vec4 normal = p - sphereCenter;
+    vec4 unit_normal = normalize(mInv * normal);
+    normal = normalize(mInv * unit_normal);
+   
+    vec4 r = 2 * normal * dot(normal, lightVector) - lightVector; // TODO: should this be normalized?
+    vec4 v = normalize(p - eye);
+    
+    // Calculate dot product
+    float RdotV = dot(r, v);
+    
+    // Check for self-blocking shadow ray
+    if (RdotV < 0) {
+        
+        return RGB();
+    }
+    
+    float appliedShine = pow(RdotV, pointSphere.n);
+    
+    float specularRed = pointSphere.k_s * l.intensity.red * appliedShine;
+    float specularGreen = pointSphere.k_s * l.intensity.green * appliedShine;
+    float specularBlue = pointSphere.k_s * l.intensity.blue * appliedShine;
+
+    RGB specularRGB = RGB(specularRed, specularGreen, specularBlue);
+    return specularRGB;
+    
 }
 
 RGB shadowRay(Light l, vec4 p, Sphere pointSphere) {
