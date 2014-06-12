@@ -403,7 +403,7 @@ RGB specularLight(Light l, vec4 p, Sphere pointSphere) {
     vec4 unit_normal = normalize(mInv * normal);
     normal = normalize(mInv * unit_normal);
    
-    vec4 r = 2 * normal * dot(normal, lightVector) - lightVector; // TODO: should this be normalized?
+    vec4 r = 2 * normal * dot(normal, lightVector) - lightVector;
     vec4 v = normalize(eye - p);
     
     // Calculate dot product
@@ -488,7 +488,6 @@ RGB shadowRay(Light l, vec4 p, Sphere pointSphere) {
     
     return ret;
     
-    // TODO: Determine if this sphere itself is blocking the light, do I already do this?
 }
 
 // Callers of this function should check for -1.0 return value
@@ -548,7 +547,6 @@ RGB getClosestIntersection(const Ray& ray, int level) {
     // Check if ray does not intersect any objects
     if (tMax == -1.0) {
         
-//        cout << "no intersection with any objects" << endl;
         RGB ret = (level > 0) ? RGB() : g_back;
         return ret;
     }
@@ -563,8 +561,6 @@ RGB getClosestIntersection(const Ray& ray, int level) {
     for (int i = 0; i < nLights; i++) {
         
         localColor += shadowRay(g_lights[i], p, closestSphere);
-        //RGB tempRGB = shadowRay(g_lights[i], p, closestSphere);
-        //cout << "(" << tempRGB.red << ", " << tempRGB.green << ", " << tempRGB.blue << ")" << endl;
         
     }
     
@@ -614,9 +610,6 @@ vec4 trace(const Ray& ray, int level)
     // TODO: implement your ray tracing routine here. -- Done
     
     // Set color based on first intersection with object. If ray doesn't intersect with any objects, getClosestIntersection() returns background color
-//    cout << "---------" << endl;
-//    printRay(ray);
-//    cout << "level: " << level << endl;
     RGB closestColor = getClosestIntersection(ray, level);
     return vec4(closestColor.red, closestColor.green, closestColor.blue, 1.0f);
 }
@@ -640,20 +633,7 @@ void renderPixel(int ix, int iy)
     Ray ray;
     ray.origin = vec4(0.0f, 0.0f, 0.0f, 1.0f);
     ray.dir = getDir(ix, iy);
-    vec4 color; // TODO: change back to "... = trace(ray);"
-    
-    
-    // TODO: debugging code, remove this
-//    if (ix != 330 || iy != 330) {
-//        
-//        color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-//        
-//    } else {
-    
-        color = trace(ray, 0);
-//        cout << color << endl;
-//    }
-
+    vec4 color = trace(ray, 0);
     setColor(ix, iy, color);
 }
 
