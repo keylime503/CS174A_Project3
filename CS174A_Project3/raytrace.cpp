@@ -20,6 +20,8 @@ struct Ray
     vec4 dir;
 };
 
+vec4 trace(const Ray& ray, int level);
+
 /*** My structs ***/
 
 struct RGB {
@@ -67,7 +69,7 @@ struct Sphere {
     
     string name;
     Position pos;
-    struct Scale scl; // TODO: why do I need "struct" here? This isn't C!
+    struct Scale scl;
     RGB color;
     float k_a;
     float k_d;
@@ -101,6 +103,14 @@ float g_bottom;
 float g_near;
 
 vec4 eye = vec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+/*** Print Ray for Debugging ***/
+void printRay(Ray r) {
+    
+    cout << "origin: " << r.origin << endl;
+    cout << "dir: " << r.dir << endl;
+    return;
+}
 
 /*** Print Parsed Data for Debugging ***/
 void printParsedData() {
@@ -392,15 +402,9 @@ RGB specularLight(Light l, vec4 p, Sphere pointSphere) {
     vec4 normal = p - sphereCenter;
     vec4 unit_normal = normalize(mInv * normal);
     normal = normalize(mInv * unit_normal);
-    
-//    cout << normal << endl;
-//    cout << lightVector << endl;
    
     vec4 r = 2 * normal * dot(normal, lightVector) - lightVector; // TODO: should this be normalized?
     vec4 v = normalize(eye - p);
-    
-//    cout << r << endl;
-//    cout << v << endl;
     
     // Calculate dot product
     float RdotV = dot(r, v);
@@ -488,7 +492,7 @@ RGB shadowRay(Light l, vec4 p, Sphere pointSphere) {
 }
 
 // Callers of this function should check for -1.0 return value
-RGB getClosestIntersection(const Ray& ray) {
+RGB getClosestIntersection(const Ray& ray, int level) {
     
     Sphere s;
     Sphere closestSphere;
@@ -499,7 +503,7 @@ RGB getClosestIntersection(const Ray& ray) {
         s = g_spheres[i];
         
         mat4 mInv = getSphereInverseTransMatrix(s);
-        vec4 trans_eye = mInv * eye;
+        vec4 trans_eye = mInv * ray.origin;
         vec4 trans_dir = mInv * ray.dir;
         
         // Calculate discriminant
@@ -527,13 +531,14 @@ RGB getClosestIntersection(const Ray& ray) {
             
         }
         
+        float min_t = (level > 0) ? 0.0 : 1.0;
+        
         // Check if this intersection is the closest to the camera so far
         if (tMax == -1.0 || t < tMax) {
             
-            if (t > 1.0) {
+            if (t > min_t) {
                 
                 tMax = t;
-                // TODO: optimize by doing &g_spheres[need index of s here]
                 closestSphere = s;
             
             }
@@ -543,11 +548,13 @@ RGB getClosestIntersection(const Ray& ray) {
     // Check if ray does not intersect any objects
     if (tMax == -1.0) {
         
-        return g_back;
+//        cout << "no intersection with any objects" << endl;
+        RGB ret = (level > 0) ? RGB() : g_back;
+        return ret;
     }
     
     // Calculate intersection point
-    vec4 p = eye + ray.dir * tMax;
+    vec4 p = ray.origin + ray.dir * tMax;
     
     RGB localColor = RGB();
     
@@ -561,15 +568,40 @@ RGB getClosestIntersection(const Ray& ray) {
         
     }
     
+    // Reflective ray
+    RGB reflectedColor = RGB();
+    if (level < 5) {
+        
+        // Calculate Normal
+        mat4 mInv = getSphereInverseScaleMatrix(closestSphere);
+        vec4 sphereCenter = vec4(closestSphere.pos.x, closestSphere.pos.y, closestSphere.pos.z, 1.0f);
+        vec4 normal = p - sphereCenter;
+        vec4 unit_normal = normalize(mInv * normal);
+        normal = normalize(mInv * unit_normal);
+        
+        // Compute Reflected Color
+        vec4 l = normalize(ray.dir);
+        float NdotL = dot(normal, l);
+        
+        // Check for self-blocking reflection ray
+        if (NdotL < 0) {
+        
+            Ray reflectedRay = Ray();
+            reflectedRay.origin = p;
+            reflectedRay.dir = -2 * normal * dot(normal, l) + l;
+            vec4 reflectedColorVec = trace(reflectedRay, level + 1);
+            reflectedColor = RGB(reflectedColorVec.x * closestSphere.k_r, reflectedColorVec.y * closestSphere.k_r, reflectedColorVec.z * closestSphere.k_r);
+
+        }
+    }
+    
     // Computer Ambient Light Contribution
     float ambientRed = closestSphere.k_a * g_ambient.red * closestSphere.color.red;
     float ambientGreen = closestSphere.k_a * g_ambient.green * closestSphere.color.green;
     float ambientBlue = closestSphere.k_a * g_ambient.blue * closestSphere.color.blue;
     RGB ambientColor = RGB(ambientRed, ambientGreen, ambientBlue);
     
-    RGB pixelColor = localColor + ambientColor; // TODO: change this to add other sources of light by slide 2 on page 12 of lecture 12
-    // TODO: See spec equation for full pixel color equation (ambient, diffuse, specular, and reflection)
-    
+    RGB pixelColor = localColor + reflectedColor + ambientColor;
     return pixelColor;
 }
 
@@ -577,12 +609,15 @@ RGB getClosestIntersection(const Ray& ray) {
 // -------------------------------------------------------------------
 // Ray tracing
 
-vec4 trace(const Ray& ray)
+vec4 trace(const Ray& ray, int level)
 {
-    // TODO: implement your ray tracing routine here.
+    // TODO: implement your ray tracing routine here. -- Done
     
     // Set color based on first intersection with object. If ray doesn't intersect with any objects, getClosestIntersection() returns background color
-    RGB closestColor = getClosestIntersection(ray);
+//    cout << "---------" << endl;
+//    printRay(ray);
+//    cout << "level: " << level << endl;
+    RGB closestColor = getClosestIntersection(ray, level);
     return vec4(closestColor.red, closestColor.green, closestColor.blue, 1.0f);
 }
 
@@ -609,13 +644,14 @@ void renderPixel(int ix, int iy)
     
     
     // TODO: debugging code, remove this
-//    if (ix != 300 || iy != 300) {
+//    if (ix != 330 || iy != 330) {
 //        
 //        color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
 //        
 //    } else {
     
-        color = trace(ray);
+        color = trace(ray, 0);
+//        cout << color << endl;
 //    }
 
     setColor(ix, iy, color);
@@ -659,7 +695,7 @@ void savePPM(int Width, int Height, string fname_str, unsigned char* pixels)
 void saveFile()
 {
     // Convert color components from floats to unsigned chars.
-    // TODO: clamp values if out of range.
+    // TODO: clamp values if out of range. -- Done
     unsigned char* buf = new unsigned char[g_width * g_height * 3];
     for (int y = 0; y < g_height; y++)
         for (int x = 0; x < g_width; x++)
